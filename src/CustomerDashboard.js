@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { auth, db } from "./firebase";
-import { doc, updateDoc, setDoc } from "firebase/firestore";
+import { auth, db, messaging } from "./firebase";
+import { doc, updateDoc, setDoc, collection, query, where, onSnapshot } from "firebase/firestore";
+import { onMessage } from "firebase/messaging";
+import { message as antdMessage } from "antd";
 
-// 🔹 Backend URL (Render deployed link)
+// 🔹 Backend URL
 const API_URL = "https://multiservice-backend.onrender.com";
 
 function CustomerDashboard() {
@@ -35,13 +37,13 @@ function CustomerDashboard() {
       const orderRef = doc(db, "orders", `${Date.now()}_${user.uid}`);
       await setDoc(orderRef, newOrder);
 
-      // Step 2️⃣ Call backend to create Razorpay order
+      // Step 2️⃣ Create Razorpay order
       const { data } = await axios.post(`${API_URL}/order`, {
         amount: amount,
       });
 
       const options = {
-        key: "rzp_test_RBUMBs6tYOV0J3", // Replace with live key in production
+        key: "rzp_test_RBUMBs6tY0YOJ3", // 🔹 Replace with your Razorpay Key
         amount: data.amount,
         currency: "INR",
         name: "TailorEase",
@@ -79,21 +81,32 @@ function CustomerDashboard() {
     }
   };
 
-  // ✅ Fetch customer’s orders
-  const fetchOrders = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) return;
-      const { data } = await axios.get(`${API_URL}/orders/customer/${user.uid}`);
-      setOrders(data);
-    } catch (error) {
-      console.error(error);
-      setMessage("❌ Error fetching orders.");
-    }
-  };
-
+  // ✅ Live tracking orders (Firestore onSnapshot)
   useEffect(() => {
-    fetchOrders();
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const q = query(collection(db, "orders"), where("customerId", "==", user.uid));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const liveOrders = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setOrders(liveOrders);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // ✅ Push notifications (toast style)
+  useEffect(() => {
+    const unsubscribe = onMessage(messaging, (payload) => {
+      console.log("📩 Push notification: ", payload);
+      antdMessage.info(`${payload.notification.title} - ${payload.notification.body}`);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // ✅ Status labels
@@ -195,12 +208,18 @@ function CustomerDashboard() {
                   {order.service}
                 </td>
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  {order.amount}
+                  ₹{order.amount}
                 </td>
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   {order.address}
                 </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px", fontWeight: "bold" }}>
+                <td
+                  style={{
+                    border: "1px solid #ccc",
+                    padding: "8px",
+                    fontWeight: "bold",
+                  }}
+                >
                   {getStatusLabel(order.status)}
                 </td>
               </tr>
