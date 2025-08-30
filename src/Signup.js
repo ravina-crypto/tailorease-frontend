@@ -1,20 +1,25 @@
 import React, { useState } from "react";
-import { auth, db } from "./firebase"; 
+import { auth, db } from "./firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 
 function Signup() {
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("Customer"); // default
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("Customer"); // Default role
 
   const handleSignup = async () => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Create user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
-      // Save extra info in Firestore
+      // Save user data in Firestore
       await setDoc(doc(db, "users", user.uid), {
         name,
         email,
@@ -22,25 +27,46 @@ function Signup() {
         createdAt: new Date()
       });
 
-      alert("Signup successful 🎉");
+      alert("✅ Signup successful!");
     } catch (error) {
-      console.error(error);
-      alert(error.message);
+      alert("❌ Error: " + error.message);
     }
   };
 
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h2>Sign Up</h2>
-      <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} /><br /><br />
-      <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} /><br /><br />
-      <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} /><br /><br />
+      <h2>Signup</h2>
+      <input
+        type="text"
+        placeholder="Full Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <br /><br />
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <br /><br />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <br /><br />
+      
+      {/* Dropdown for Role */}
       <select value={role} onChange={(e) => setRole(e.target.value)}>
-        <option>Customer</option>
-        <option>Tailor</option>
-        <option>Delivery</option>
-      </select><br /><br />
-      <button onClick={handleSignup}>Sign Up</button>
+        <option value="Customer">Customer</option>
+        <option value="Tailor">Tailor</option>
+        <option value="Delivery Partner">Delivery Partner</option>
+      </select>
+      <br /><br />
+
+      <button onClick={handleSignup}>Signup</button>
     </div>
   );
 }
