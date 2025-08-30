@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { auth, db } from "./firebase";
+import { auth, db, saveFcmToken } from "./firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 
@@ -11,7 +11,7 @@ function Signup() {
 
   const handleSignup = async () => {
     try {
-      // Create user in Firebase Auth
+      // 🔹 Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -19,13 +19,16 @@ function Signup() {
       );
       const user = userCredential.user;
 
-      // Save user data in Firestore
+      // 🔹 Save user data in Firestore
       await setDoc(doc(db, "users", user.uid), {
         name,
         email,
         role,
-        createdAt: new Date()
+        createdAt: new Date(),
       });
+
+      // 🔹 Save FCM token immediately after signup
+      await saveFcmToken(user);
 
       alert("✅ Signup successful!");
     } catch (error) {
@@ -57,12 +60,12 @@ function Signup() {
         onChange={(e) => setPassword(e.target.value)}
       />
       <br /><br />
-      
+
       {/* Dropdown for Role */}
       <select value={role} onChange={(e) => setRole(e.target.value)}>
         <option value="Customer">Customer</option>
         <option value="Tailor">Tailor</option>
-        <option value="Delivery Partner">Delivery Partner</option>
+        <option value="Delivery">Delivery Partner</option>
       </select>
       <br /><br />
 
