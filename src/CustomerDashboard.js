@@ -1,11 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { auth, db, messaging } from "./firebase";
-import { doc, updateDoc, setDoc, collection, query, where, onSnapshot } from "firebase/firestore";
-import { onMessage } from "firebase/messaging";
-import { message as antdMessage } from "antd";
+import { auth } from "./firebase";
 
-// 🔹 Backend URL
 const API_URL = "https://multiservice-backend.onrender.com";
 
 function CustomerDashboard() {
@@ -14,8 +10,10 @@ function CustomerDashboard() {
   const [address, setAddress] = useState("");
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState("");
+  const [reviews, setReviews] = useState("");
+  const [rating, setRating] = useState(5);
 
-  // ✅ Place new order + payment
+  // ✅ Place new order
   const handlePlaceOrder = async () => {
     try {
       const user = auth.currentUser;
@@ -24,209 +22,192 @@ function CustomerDashboard() {
         return;
       }
 
-      // Step 1️⃣ Create new Firestore order as PendingPayment
       const newOrder = {
         customerId: user.uid,
         service,
         amount,
         address,
-        status: "PendingPayment",
-        createdAt: new Date(),
       };
 
-      const orderRef = doc(db, "orders", `${Date.now()}_${user.uid}`);
-      await setDoc(orderRef, newOrder);
-
-      // Step 2️⃣ Create Razorpay order
-      const { data } = await axios.post(`${API_URL}/order`, {
-        amount: amount,
-      });
-
-      const options = {
-        key: "rzp_test_RBUMBs6tY0YOJ3", // 🔹 Replace with your Razorpay Key
-        amount: data.amount,
-        currency: "INR",
-        name: "TailorEase",
-        description: `Payment for ${service}`,
-        order_id: data.id,
-        handler: async function (response) {
-          try {
-            // Step 3️⃣ Verify payment in backend
-            const verifyRes = await axios.post(`${API_URL}/payment/verify`, {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              orderId: orderRef.id,
-            });
-
-            if (verifyRes.data.success) {
-              await updateDoc(orderRef, { status: "Pending" }); // ✅ Update to active
-              setMessage("✅ Order placed & payment verified!");
-            } else {
-              setMessage("❌ Payment verification failed!");
-            }
-          } catch (err) {
-            console.error("Verification error:", err);
-            setMessage("❌ Error verifying payment.");
-          }
-        },
-        theme: { color: "#663ff" },
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.open();
+      const { data } = await axios.post(`${API_URL}/orders`, newOrder);
+      setOrders([...orders, data]);
+      setMessage("✅ Order placed successfully!");
+      setService("");
+      setAmount("");
+      setAddress("");
     } catch (error) {
       console.error(error);
-      setMessage("❌ Error placing order.");
+      setMessage("❌ Error placing order");
     }
   };
 
-  // ✅ Live tracking orders (Firestore onSnapshot)
+  // ✅ Fetch customer orders
+  const fetchOrders = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const { data } = await axios.get(`${API_URL}/orders/customer/${user.uid}`);
+      setOrders(data);
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Error fetching orders");
+    }
+  };
+
+  // ✅ Submit Review
+  const submitReview = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return alert("Login first!");
+
+      await axios.post(`${API_URL}/reviews`, {
+        userId: user.uid,
+        rating,
+        comment: reviews,
+      });
+
+      setMessage("✅ Review submitted!");
+      setReviews("");
+      setRating(5);
+    } catch (err) {
+      console.error(err);
+      setMessage("❌ Failed to submit review");
+    }
+  };
+
   useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const q = query(collection(db, "orders"), where("customerId", "==", user.uid));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const liveOrders = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setOrders(liveOrders);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // ✅ Push notifications (toast style)
-  useEffect(() => {
-    const unsubscribe = onMessage(messaging, (payload) => {
-      console.log("📩 Push notification: ", payload);
-      antdMessage.info(`${payload.notification.title} - ${payload.notification.body}`);
-    });
-
-    return () => unsubscribe();
+    fetchOrders();
   }, []);
 
   // ✅ Status labels
   const getStatusLabel = (status) => {
     switch (status) {
-      case "PendingPayment":
-        return "💳 Awaiting Payment";
       case "Pending":
-        return "⏳ Waiting for tailor";
+        return "⏳ Pending (Waiting for tailor)";
       case "InProgress":
-        return "🧵 Tailor working";
+        return "🔧 In Progress (Tailor working)";
       case "Completed":
-        return "✅ Ready for pickup";
+        return "✅ Completed (Ready for pickup)";
       case "PickedUp":
-        return "📦 Picked up by delivery";
+        return "📦 Picked up by Delivery";
       case "OutForDelivery":
-        return "🚚 Out for delivery";
+        return "🚚 Out for Delivery";
       case "Delivered":
-        return "🎉 Delivered";
+        return "🎉 Delivered!";
       default:
         return status;
     }
   };
 
   return (
-    <div style={{ textAlign: "center", marginTop: "40px" }}>
-      <h2>👗 Customer Dashboard</h2>
-      <p>Book tailoring services & track your orders live</p>
-
+    <div style={{ padding: "20px" }}>
+      <h2>🧵 Customer Dashboard</h2>
       {message && <p style={{ color: "green" }}>{message}</p>}
 
-      {/* 🔹 Order Form */}
-      <div style={{ marginBottom: "30px" }}>
-        <input
-          type="text"
-          placeholder="Enter service (e.g., Blouse Stitching)"
-          value={service}
-          onChange={(e) => setService(e.target.value)}
-          style={{ margin: "10px", padding: "10px", width: "250px" }}
-        />
-        <br />
-        <input
-          type="number"
-          placeholder="Enter amount"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          style={{ margin: "10px", padding: "10px", width: "250px" }}
-        />
-        <br />
-        <input
-          type="text"
-          placeholder="Enter address"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          style={{ margin: "10px", padding: "10px", width: "250px" }}
-        />
-        <br />
-        <button
-          onClick={handlePlaceOrder}
-          style={{
-            padding: "10px 20px",
-            background: "#663ff",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-            marginTop: "10px",
-          }}
-        >
-          Place Order & Pay
-        </button>
-      </div>
+      {/* Order Form */}
+      <h3>📌 Place Order</h3>
+      <input
+        type="text"
+        placeholder="Enter service (e.g., Blouse Stitching)"
+        value={service}
+        onChange={(e) => setService(e.target.value)}
+        style={{ margin: "10px", padding: "10px", width: "250px" }}
+      />
+      <br />
+      <input
+        type="number"
+        placeholder="Enter amount"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        style={{ margin: "10px", padding: "10px", width: "250px" }}
+      />
+      <br />
+      <input
+        type="text"
+        placeholder="Enter address"
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+        style={{ margin: "10px", padding: "10px", width: "250px" }}
+      />
+      <br />
+      <button
+        onClick={handlePlaceOrder}
+        style={{
+          padding: "10px 20px",
+          background: "#6c63ff",
+          color: "white",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+          marginTop: "10px",
+        }}
+      >
+        Place Order
+      </button>
 
-      {/* 🔹 Orders List */}
-      <h3>📋 Your Orders</h3>
+      {/* Orders List */}
+      <h3 style={{ marginTop: "30px" }}>📦 Your Orders</h3>
       {orders.length === 0 ? (
         <p>No orders yet</p>
       ) : (
         <table
-          style={{
-            margin: "auto",
-            borderCollapse: "collapse",
-            width: "90%",
-            maxWidth: "900px",
-          }}
+          style={{ margin: "auto", borderCollapse: "collapse", width: "90%" }}
         >
           <thead>
             <tr style={{ background: "#f0f0f0" }}>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Service</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Amount</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Address</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Status</th>
+              <th>Service</th>
+              <th>Amount</th>
+              <th>Address</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
             {orders.map((order) => (
               <tr key={order.id}>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  {order.service}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  ₹{order.amount}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  {order.address}
-                </td>
-                <td
-                  style={{
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {getStatusLabel(order.status)}
-                </td>
+                <td>{order.service}</td>
+                <td>₹{order.amount}</td>
+                <td>{order.address}</td>
+                <td>{getStatusLabel(order.status)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+
+      {/* Submit Review */}
+      <h3 style={{ marginTop: "30px" }}>⭐ Leave a Review</h3>
+      <textarea
+        placeholder="Write your review..."
+        value={reviews}
+        onChange={(e) => setReviews(e.target.value)}
+        style={{ margin: "10px", padding: "10px", width: "300px", height: "80px" }}
+      />
+      <br />
+      <label>
+        Rating:{" "}
+        <select value={rating} onChange={(e) => setRating(e.target.value)}>
+          <option value="5">⭐⭐⭐⭐⭐</option>
+          <option value="4">⭐⭐⭐⭐</option>
+          <option value="3">⭐⭐⭐</option>
+          <option value="2">⭐⭐</option>
+          <option value="1">⭐</option>
+        </select>
+      </label>
+      <br />
+      <button
+        onClick={submitReview}
+        style={{
+          padding: "10px 20px",
+          background: "green",
+          color: "white",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+          marginTop: "10px",
+        }}
+      >
+        Submit Review
+      </button>
     </div>
   );
 }
