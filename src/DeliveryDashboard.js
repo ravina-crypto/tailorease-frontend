@@ -1,35 +1,33 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
+// 🌍 Backend URL
+const API_URL = "https://multiservice-backend.onrender.com";
+
 function DeliveryDashboard() {
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState("");
 
-  // Fetch all orders
+  // ✅ Fetch all orders
   const fetchOrders = async () => {
     try {
-      const { data } = await axios.get(
-        "https://multiservice-backend.onrender.com/orders"
-      );
+      const { data } = await axios.get(`${API_URL}/orders`);
       setOrders(data);
     } catch (error) {
       console.error(error);
-      setMessage("❌ Error fetching orders: " + error.message);
+      setMessage("❌ Error fetching orders");
     }
   };
 
-  // Update delivery status
+  // ✅ Update order status
   const updateStatus = async (orderId, newStatus) => {
     try {
-      await axios.put(
-        `https://multiservice-backend.onrender.com/orders/${orderId}`,
-        { status: newStatus }
-      );
-      setMessage(`✅ Order ${orderId} updated to ${newStatus}`);
-      fetchOrders();
+      await axios.put(`${API_URL}/orders/${orderId}`, { status: newStatus });
+      setMessage(`✅ Order ${orderId} updated to "${newStatus}"`);
+      fetchOrders(); // Refresh orders
     } catch (error) {
       console.error(error);
-      setMessage("❌ Error updating order: " + error.message);
+      setMessage("❌ Error updating order");
     }
   };
 
@@ -40,7 +38,8 @@ function DeliveryDashboard() {
   return (
     <div style={{ textAlign: "center", marginTop: "40px" }}>
       <h2>🚚 Delivery Partner Dashboard</h2>
-      <p>Manage pickups & deliveries</p>
+      <p>Manage pickups and deliveries</p>
+
       {message && <p style={{ color: "green" }}>{message}</p>}
 
       {orders.length === 0 ? (
@@ -50,27 +49,17 @@ function DeliveryDashboard() {
           style={{
             margin: "auto",
             borderCollapse: "collapse",
-            width: "80%",
+            width: "90%",
             maxWidth: "900px",
           }}
         >
           <thead>
             <tr style={{ background: "#f0f0f0" }}>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Customer
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Service
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Address
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Status
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Actions
-              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Customer</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Service</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Address</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Status</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -85,14 +74,14 @@ function DeliveryDashboard() {
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   {order.address}
                 </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                <td style={{ border: "1px solid #ccc", padding: "8px", fontWeight: "bold" }}>
                   {order.status}
                 </td>
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   {order.status === "Completed" && (
                     <button
                       onClick={() => updateStatus(order.id, "PickedUp")}
-                      style={{ marginRight: "5px" }}
+                      style={{ marginRight: "5px", background: "#007bff", color: "white", padding: "5px 10px", border: "none", borderRadius: "5px" }}
                     >
                       Mark Picked Up
                     </button>
@@ -100,7 +89,7 @@ function DeliveryDashboard() {
                   {order.status === "PickedUp" && (
                     <button
                       onClick={() => updateStatus(order.id, "OutForDelivery")}
-                      style={{ marginRight: "5px" }}
+                      style={{ marginRight: "5px", background: "#ffc107", color: "black", padding: "5px 10px", border: "none", borderRadius: "5px" }}
                     >
                       Out for Delivery
                     </button>
@@ -108,10 +97,12 @@ function DeliveryDashboard() {
                   {order.status === "OutForDelivery" && (
                     <button
                       onClick={() => updateStatus(order.id, "Delivered")}
+                      style={{ background: "#28a745", color: "white", padding: "5px 10px", border: "none", borderRadius: "5px" }}
                     >
                       Mark Delivered
                     </button>
                   )}
+                  {order.status === "Delivered" && <span>✔️ Delivered</span>}
                 </td>
               </tr>
             ))}
