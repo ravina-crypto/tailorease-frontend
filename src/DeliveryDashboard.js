@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { message as antdMessage } from "antd"; // Toast notifications
 
-// ✅ Backend URL
+// Backend URL
 const API_URL = "https://multiservice-backend.onrender.com";
 
 function DeliveryDashboard() {
@@ -19,13 +20,13 @@ function DeliveryDashboard() {
     }
   };
 
-  // ✅ Update order status + send push notification
+  // ✅ Update order status + notify customer
   const updateStatus = async (orderId, customerId, newStatus) => {
     try {
-      // 1. Update status in backend
+      // 1. Update in backend
       await axios.put(`${API_URL}/orders/${orderId}`, { status: newStatus });
 
-      // 2. Notify customer via backend FCM
+      // 2. Send push notification
       await axios.post(`${API_URL}/notify`, {
         userId: customerId,
         title: "📦 Order Update",
@@ -33,13 +34,18 @@ function DeliveryDashboard() {
       });
 
       setMessage(`✅ Order ${orderId} updated to "${newStatus}"`);
-      fetchOrders(); // Refresh
+      antdMessage.success(`Order ${orderId} is now ${newStatus}`);
+
+      // Refresh orders
+      fetchOrders();
     } catch (error) {
       console.error(error);
       setMessage("❌ Error updating order");
+      antdMessage.error("Failed to update order");
     }
   };
 
+  // ✅ Auto load orders
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -52,7 +58,7 @@ function DeliveryDashboard() {
       {message && <p style={{ color: "green" }}>{message}</p>}
 
       {orders.length === 0 ? (
-        <p>📭 No orders available</p>
+        <p>No orders available</p>
       ) : (
         <table
           style={{
@@ -83,7 +89,7 @@ function DeliveryDashboard() {
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   {order.address}
                 </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                <td style={{ border: "1px solid #ccc", padding: "8px", fontWeight: "bold" }}>
                   {order.status}
                 </td>
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
@@ -104,6 +110,7 @@ function DeliveryDashboard() {
                       Mark Picked Up
                     </button>
                   )}
+
                   {order.status === "PickedUp" && (
                     <button
                       onClick={() =>
@@ -111,8 +118,8 @@ function DeliveryDashboard() {
                       }
                       style={{
                         marginRight: "5px",
-                        background: "#ffc107",
-                        color: "black",
+                        background: "#ff6107",
+                        color: "white",
                         padding: "5px 10px",
                         border: "none",
                         borderRadius: "5px",
@@ -121,6 +128,7 @@ function DeliveryDashboard() {
                       Out for Delivery
                     </button>
                   )}
+
                   {order.status === "OutForDelivery" && (
                     <button
                       onClick={() =>
@@ -137,7 +145,8 @@ function DeliveryDashboard() {
                       Mark Delivered
                     </button>
                   )}
-                  {order.status === "Delivered" && <span>✅ Delivered</span>}
+
+                  {order.status === "Delivered" && <span>🎉 Delivered</span>}
                 </td>
               </tr>
             ))}
