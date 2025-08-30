@@ -8,35 +8,50 @@ import CustomerDashboard from "./CustomerDashboard";
 import TailorDashboard from "./TailorDashboard";
 import DeliveryDashboard from "./DeliveryDashboard";
 
-// ------------------ Payment Component ------------------
+const API_URL = "https://multiservice-backend.onrender.com";
+
+// ---------------- Payment Component ----------------
 function Payment() {
   const [service, setService] = useState("");
   const [amount, setAmount] = useState("");
 
-  const handlePayment = async () => {
+  const handlePayPayment = async () => {
     try {
-      // Call backend to create order
-      const { data } = await axios.post("https://multiservice-backend.onrender.com/order", {
+      // ✅ Step 1: Create Razorpay Order from backend
+      const { data } = await axios.post(`${API_URL}/order`, {
         amount: amount,
       });
 
       const options = {
-        key: "rzp_test_RBUMBs6tY0YOJ3", // Replace with your Razorpay Key_ID
+        key: "rzp_test_RBUMBs6tY0YOJ3", // ✅ Replace with your Razorpay Key_ID
         amount: data.amount,
         currency: "INR",
         name: "TailorEase",
         description: `Payment for ${service}`,
         order_id: data.id,
-        handler: function (response) {
-          alert(`✅ Payment successful for ${service}! Payment ID: ${response.razorpay_payment_id}`);
+        handler: async function (response) {
+          try {
+            // ✅ Step 2: Verify payment in backend
+            await axios.post(`${API_URL}/payment/verify`, {
+              orderId: data.id,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+              customerId: "CURRENT_USER_ID", // ✅ Replace with logged in userId from Firebase Auth
+            });
+
+            alert(`✅ Payment successful for ${service}!`);
+          } catch (err) {
+            console.error("Verification error:", err);
+            alert("❌ Payment verification failed");
+          }
         },
-        theme: { color: "#6c63ff" },
+        theme: { color: "#66c3ff" },
       };
 
       const rzp = new window.Razorpay(options);
       rzp.open();
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
       alert("❌ Payment failed");
     }
   };
@@ -63,14 +78,15 @@ function Payment() {
       />
       <br />
       <button
-        onClick={handlePayment}
+        onClick={handlePayPayment}
         style={{
           padding: "10px 20px",
-          background: "#6c63ff",
+          background: "#66c3ff",
           color: "white",
           border: "none",
           borderRadius: "5px",
           cursor: "pointer",
+          marginTop: "10px",
         }}
       >
         Pay Now
@@ -79,7 +95,7 @@ function Payment() {
   );
 }
 
-// ------------------ Main App with Routes ------------------
+// ---------------- Main App with Routes ----------------
 function App() {
   return (
     <Router>
