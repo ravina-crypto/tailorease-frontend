@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { auth } from "./firebase";
 
+// 🌍 Backend URL (Render deployed link)
+const API_URL = "https://multiservice-backend.onrender.com";
+
 function CustomerDashboard() {
   const [service, setService] = useState("");
   const [amount, setAmount] = useState("");
@@ -9,7 +12,7 @@ function CustomerDashboard() {
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState("");
 
-  // Place a new order
+  // ✅ Place new order
   const handlePlaceOrder = async () => {
     try {
       const user = auth.currentUser;
@@ -18,48 +21,49 @@ function CustomerDashboard() {
         return;
       }
 
-      const { data } = await axios.post(
-        "https://multiservice-backend.onrender.com/order",
-        {
-          customerId: user.uid,
-          service,
-          amount: Number(amount),
-          address,
-        }
-      );
+      const newOrder = {
+        customerId: user.uid,
+        service,
+        amount,
+        address,
+      };
+
+      const { data } = await axios.post(`${API_URL}/orders`, newOrder);
 
       setMessage("✅ Order placed successfully!");
       setService("");
       setAmount("");
       setAddress("");
-      fetchOrders(); // Refresh orders after placing
+
+      // Add new order to state
+      setOrders([...orders, data]);
     } catch (error) {
       console.error(error);
-      setMessage("❌ Error placing order: " + error.message);
+      setMessage("❌ Error placing order");
     }
   };
 
-  // Fetch all orders for this customer
+  // ✅ Fetch customer’s orders
   const fetchOrders = async () => {
     try {
       const user = auth.currentUser;
       if (!user) return;
 
-      const { data } = await axios.get(
-        `https://multiservice-backend.onrender.com/orders/${user.uid}`
-      );
+      const { data } = await axios.get(`${API_URL}/orders/customer/${user.uid}`);
       setOrders(data);
     } catch (error) {
       console.error(error);
-      setMessage("❌ Error fetching orders: " + error.message);
+      setMessage("❌ Error fetching orders");
     }
   };
 
+  // 🔄 Auto fetch orders on load
   useEffect(() => {
     fetchOrders();
+    // eslint-disable-next-line
   }, []);
 
-  // Status with emoji labels
+  // ✅ Status with emojis
   const getStatusLabel = (status) => {
     switch (status) {
       case "Pending":
@@ -69,11 +73,11 @@ function CustomerDashboard() {
       case "Completed":
         return "✅ Completed (Ready for pickup)";
       case "PickedUp":
-        return "📦 Picked Up by Delivery";
+        return "📦 Picked up by Delivery";
       case "OutForDelivery":
-        return "🚚 Out for Delivery";
+        return "🚚 Out for delivery";
       case "Delivered":
-        return "✔️ Delivered";
+        return "🎉 Delivered";
       default:
         return status;
     }
@@ -82,11 +86,11 @@ function CustomerDashboard() {
   return (
     <div style={{ textAlign: "center", marginTop: "40px" }}>
       <h2>👤 Customer Dashboard</h2>
-      <p>Book tailoring services and track your orders live</p>
+      <p>Book tailoring services & track your orders live</p>
 
       {message && <p style={{ color: "green" }}>{message}</p>}
 
-      {/* New Order Form */}
+      {/* Order Form */}
       <div style={{ marginBottom: "30px" }}>
         <input
           type="text"
@@ -96,6 +100,7 @@ function CustomerDashboard() {
           style={{ margin: "10px", padding: "10px", width: "250px" }}
         />
         <br />
+
         <input
           type="number"
           placeholder="Enter amount"
@@ -104,6 +109,7 @@ function CustomerDashboard() {
           style={{ margin: "10px", padding: "10px", width: "250px" }}
         />
         <br />
+
         <input
           type="text"
           placeholder="Enter address"
@@ -112,6 +118,7 @@ function CustomerDashboard() {
           style={{ margin: "10px", padding: "10px", width: "250px" }}
         />
         <br />
+
         <button
           onClick={handlePlaceOrder}
           style={{
@@ -137,38 +144,24 @@ function CustomerDashboard() {
           style={{
             margin: "auto",
             borderCollapse: "collapse",
-            width: "80%",
+            width: "90%",
             maxWidth: "900px",
           }}
         >
           <thead>
             <tr style={{ background: "#f0f0f0" }}>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Service
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Amount
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Address
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Status
-              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Service</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Amount</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Address</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Status</th>
             </tr>
           </thead>
           <tbody>
             {orders.map((order) => (
               <tr key={order.id}>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  {order.service}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  ₹{order.amount}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  {order.address}
-                </td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.service}</td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.amount}</td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.address}</td>
                 <td
                   style={{
                     border: "1px solid #ccc",
