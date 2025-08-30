@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { message as antdMessage } from "antd"; // Toast notifications
 
 // Backend URL
 const API_URL = "https://multiservice-backend.onrender.com";
@@ -20,13 +19,13 @@ function DeliveryDashboard() {
     }
   };
 
-  // ✅ Update order status + notify customer
+  // ✅ Update order status & notify customer
   const updateStatus = async (orderId, customerId, newStatus) => {
     try {
-      // 1. Update in backend
+      // 1️⃣ Update status in backend
       await axios.put(`${API_URL}/orders/${orderId}`, { status: newStatus });
 
-      // 2. Send push notification
+      // 2️⃣ Send notification to customer
       await axios.post(`${API_URL}/notify`, {
         userId: customerId,
         title: "📦 Order Update",
@@ -34,18 +33,13 @@ function DeliveryDashboard() {
       });
 
       setMessage(`✅ Order ${orderId} updated to "${newStatus}"`);
-      antdMessage.success(`Order ${orderId} is now ${newStatus}`);
-
-      // Refresh orders
-      fetchOrders();
+      fetchOrders(); // Refresh orders
     } catch (error) {
       console.error(error);
       setMessage("❌ Error updating order");
-      antdMessage.error("Failed to update order");
     }
   };
 
-  // ✅ Auto load orders
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -58,7 +52,7 @@ function DeliveryDashboard() {
       {message && <p style={{ color: "green" }}>{message}</p>}
 
       {orders.length === 0 ? (
-        <p>No orders available</p>
+        <p>📭 No orders available</p>
       ) : (
         <table
           style={{
@@ -95,9 +89,7 @@ function DeliveryDashboard() {
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   {order.status === "Completed" && (
                     <button
-                      onClick={() =>
-                        updateStatus(order.id, order.customerId, "PickedUp")
-                      }
+                      onClick={() => updateStatus(order.id, order.customerId, "PickedUp")}
                       style={{
                         marginRight: "5px",
                         background: "#007bff",
@@ -107,33 +99,29 @@ function DeliveryDashboard() {
                         borderRadius: "5px",
                       }}
                     >
-                      Mark Picked Up
+                      📦 Mark Picked Up
                     </button>
                   )}
 
                   {order.status === "PickedUp" && (
                     <button
-                      onClick={() =>
-                        updateStatus(order.id, order.customerId, "OutForDelivery")
-                      }
+                      onClick={() => updateStatus(order.id, order.customerId, "OutForDelivery")}
                       style={{
                         marginRight: "5px",
-                        background: "#ff6107",
-                        color: "white",
+                        background: "#ffc107",
+                        color: "black",
                         padding: "5px 10px",
                         border: "none",
                         borderRadius: "5px",
                       }}
                     >
-                      Out for Delivery
+                      🚚 Out for Delivery
                     </button>
                   )}
 
                   {order.status === "OutForDelivery" && (
                     <button
-                      onClick={() =>
-                        updateStatus(order.id, order.customerId, "Delivered")
-                      }
+                      onClick={() => updateStatus(order.id, order.customerId, "Delivered")}
                       style={{
                         background: "#28a745",
                         color: "white",
@@ -142,11 +130,11 @@ function DeliveryDashboard() {
                         borderRadius: "5px",
                       }}
                     >
-                      Mark Delivered
+                      ✅ Mark Delivered
                     </button>
                   )}
 
-                  {order.status === "Delivered" && <span>🎉 Delivered</span>}
+                  {order.status === "Delivered" && <span>✔ Delivered</span>}
                 </td>
               </tr>
             ))}
