@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { auth, db } from "./firebase";
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-  onSnapshot,
-  query,
-  where,
-} from "firebase/firestore";
+import axios from "axios";
+import { auth } from "./firebase";
 
 function CustomerDashboard() {
   const [service, setService] = useState("");
@@ -21,54 +14,58 @@ function CustomerDashboard() {
     try {
       const user = auth.currentUser;
       if (!user) {
-        alert("⚠ Please login first!");
+        alert("⚠️ Please login first!");
         return;
       }
 
-      await addDoc(collection(db, "orders"), {
-        customerId: user.uid,
-        service,
-        amount: Number(amount),
-        address,
-        status: "Pending",
-        createdAt: serverTimestamp(),
-      });
+      const { data } = await axios.post(
+        "https://multiservice-backend.onrender.com/order",
+        {
+          customerId: user.uid,
+          service,
+          amount: Number(amount),
+          address,
+        }
+      );
 
       setMessage("✅ Order placed successfully!");
       setService("");
       setAmount("");
       setAddress("");
+      fetchOrders(); // Refresh orders after placing
     } catch (error) {
       console.error(error);
       setMessage("❌ Error placing order: " + error.message);
     }
   };
 
-  // Real-time fetch only this customer's orders
+  // Fetch all orders for this customer
+  const fetchOrders = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const { data } = await axios.get(
+        `https://multiservice-backend.onrender.com/orders/${user.uid}`
+      );
+      setOrders(data);
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Error fetching orders: " + error.message);
+    }
+  };
+
   useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const q = query(collection(db, "orders"), where("customerId", "==", user.uid));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const orderList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setOrders(orderList);
-    });
-
-    return () => unsubscribe();
+    fetchOrders();
   }, []);
 
-  // Get readable status with emojis
+  // Status with emoji labels
   const getStatusLabel = (status) => {
     switch (status) {
       case "Pending":
         return "⏳ Pending (Waiting for tailor)";
       case "InProgress":
-        return "✂️ In Progress (Tailor working)";
+        return "🧵 In Progress (Tailor working)";
       case "Completed":
         return "✅ Completed (Ready for pickup)";
       case "PickedUp":
@@ -84,7 +81,7 @@ function CustomerDashboard() {
 
   return (
     <div style={{ textAlign: "center", marginTop: "40px" }}>
-      <h2>🧵 Customer Dashboard</h2>
+      <h2>👤 Customer Dashboard</h2>
       <p>Book tailoring services and track your orders live</p>
 
       {message && <p style={{ color: "green" }}>{message}</p>}
@@ -140,16 +137,24 @@ function CustomerDashboard() {
           style={{
             margin: "auto",
             borderCollapse: "collapse",
-            width: "90%",
+            width: "80%",
             maxWidth: "900px",
           }}
         >
           <thead>
             <tr style={{ background: "#f0f0f0" }}>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Service</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Amount</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Address</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Status</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Service
+              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Amount
+              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Address
+              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Status
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -164,7 +169,13 @@ function CustomerDashboard() {
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   {order.address}
                 </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px", fontWeight: "bold" }}>
+                <td
+                  style={{
+                    border: "1px solid #ccc",
+                    padding: "8px",
+                    fontWeight: "bold",
+                  }}
+                >
                   {getStatusLabel(order.status)}
                 </td>
               </tr>
