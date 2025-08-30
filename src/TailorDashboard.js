@@ -1,62 +1,79 @@
 import React, { useEffect, useState } from "react";
-import { db } from "./firebase";
-import { collection, onSnapshot, updateDoc, doc } from "firebase/firestore";
+import axios from "axios";
 
 function TailorDashboard() {
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState("");
 
-  // Real-time listener for orders
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "orders"), (snapshot) => {
-      const orderList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setOrders(orderList);
-    });
+  // Fetch all pending/in-progress orders
+  const fetchOrders = async () => {
+    try {
+      const { data } = await axios.get(
+        "https://multiservice-backend.onrender.com/orders"
+      );
+      setOrders(data);
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Error fetching orders: " + error.message);
+    }
+  };
 
-    return () => unsubscribe();
-  }, []);
-
-  // Update order status
+  // Update order status (e.g., InProgress → Completed)
   const updateStatus = async (orderId, newStatus) => {
     try {
-      const orderRef = doc(db, "orders", orderId);
-      await updateDoc(orderRef, { status: newStatus });
-      setMessage(`✅ Order ${orderId} updated to "${newStatus}"`);
+      await axios.put(
+        `https://multiservice-backend.onrender.com/orders/${orderId}`,
+        { status: newStatus }
+      );
+      setMessage(`✅ Order ${orderId} updated to ${newStatus}`);
+      fetchOrders();
     } catch (error) {
       console.error(error);
       setMessage("❌ Error updating order: " + error.message);
     }
   };
 
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
   return (
     <div style={{ textAlign: "center", marginTop: "40px" }}>
       <h2>🧵 Tailor Dashboard</h2>
       <p>Manage tailoring orders</p>
-
       {message && <p style={{ color: "green" }}>{message}</p>}
 
       {orders.length === 0 ? (
-        <p>No orders available</p>
+        <p>No orders yet</p>
       ) : (
         <table
           style={{
             margin: "auto",
             borderCollapse: "collapse",
-            width: "90%",
+            width: "80%",
             maxWidth: "900px",
           }}
         >
           <thead>
             <tr style={{ background: "#f0f0f0" }}>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Customer</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Service</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Amount</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Address</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Status</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Actions</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Customer
+              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Service
+              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Amount
+              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Address
+              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Status
+              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -75,12 +92,7 @@ function TailorDashboard() {
                   {order.address}
                 </td>
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  {order.status === "Pending" && <span>⏳ Pending</span>}
-                  {order.status === "InProgress" && <span>✂️ In Progress</span>}
-                  {order.status === "Completed" && <span>✅ Completed (Ready for Pickup)</span>}
-                  {order.status === "PickedUp" && <span>📦 Picked Up by Delivery</span>}
-                  {order.status === "OutForDelivery" && <span>🚚 Out for Delivery</span>}
-                  {order.status === "Delivered" && <span>✔️ Delivered</span>}
+                  {order.status}
                 </td>
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   {order.status === "Pending" && (
@@ -88,15 +100,14 @@ function TailorDashboard() {
                       onClick={() => updateStatus(order.id, "InProgress")}
                       style={{ marginRight: "5px" }}
                     >
-                      Mark as In Progress
+                      Start Work
                     </button>
                   )}
                   {order.status === "InProgress" && (
                     <button
                       onClick={() => updateStatus(order.id, "Completed")}
-                      style={{ marginRight: "5px" }}
                     >
-                      Mark as Completed
+                      Mark Completed
                     </button>
                   )}
                 </td>
