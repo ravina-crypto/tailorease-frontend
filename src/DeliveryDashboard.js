@@ -1,25 +1,23 @@
 import React, { useEffect, useState } from "react";
 import { db } from "./firebase";
-import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
+import { collection, onSnapshot, updateDoc, doc } from "firebase/firestore";
 
 function DeliveryDashboard() {
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState("");
 
-  // Fetch all orders
-  const fetchOrders = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "orders"));
-      const ordersList = querySnapshot.docs.map((doc) => ({
+  // Real-time listener for orders
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "orders"), (snapshot) => {
+      const ordersList = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
       setOrders(ordersList);
-    } catch (error) {
-      console.error(error);
-      setMessage("❌ Error fetching orders: " + error.message);
-    }
-  };
+    });
+
+    return () => unsubscribe(); // cleanup
+  }, []);
 
   // Update order status
   const updateStatus = async (orderId, newStatus) => {
@@ -27,16 +25,11 @@ function DeliveryDashboard() {
       const orderRef = doc(db, "orders", orderId);
       await updateDoc(orderRef, { status: newStatus });
       setMessage(`✅ Order ${orderId} updated to "${newStatus}"`);
-      fetchOrders(); // refresh orders
     } catch (error) {
       console.error(error);
       setMessage("❌ Error updating order: " + error.message);
     }
   };
-
-  useEffect(() => {
-    fetchOrders();
-  }, []);
 
   return (
     <div style={{ textAlign: "center", marginTop: "40px" }}>
@@ -45,95 +38,51 @@ function DeliveryDashboard() {
 
       {message && <p style={{ color: "green" }}>{message}</p>}
 
-      <div style={{ marginTop: "20px" }}>
-        {orders.length === 0 ? (
-          <p>No orders available</p>
-        ) : (
-          <table
-            style={{
-              margin: "auto",
-              borderCollapse: "collapse",
-              width: "80%",
-            }}
-          >
-            <thead>
-              <tr style={{ background: "#f0f0f0" }}>
-                <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  Customer
-                </th>
-                <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  Service
-                </th>
-                <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  Amount
-                </th>
-                <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  Address
-                </th>
-                <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  Status
-                </th>
-                <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  Actions
-                </th>
+      {orders.length === 0 ? (
+        <p>No orders available</p>
+      ) : (
+        <table
+          style={{
+            margin: "auto",
+            borderCollapse: "collapse",
+            width: "800px",
+          }}
+        >
+          <thead>
+            <tr style={{ background: "#f0f0f0" }}>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Customer</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Service</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Amount</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Address</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Status</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((order) => (
+              <tr key={order.id}>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.customerId}</td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.service}</td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.amount}</td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.address}</td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.status}</td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  {order.status === "Completed" && (
+                    <button
+                      onClick={() => updateStatus(order.id, "Delivered")}
+                      style={{ marginRight: "5px" }}
+                    >
+                      Mark as Delivered
+                    </button>
+                  )}
+                  {order.status === "Pending" && <span>⏳ Waiting for tailor</span>}
+                  {order.status === "Delivered" && <span>✅ Delivered</span>}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => (
-                <tr key={order.id}>
-                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                    {order.customerId}
-                  </td>
-                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                    {order.service}
-                  </td>
-                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                    ₹{order.amount}
-                  </td>
-                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                    {order.address}
-                  </td>
-                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                    {order.status}
-                  </td>
-                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                    {order.status === "Completed" && (
-                      <button
-                        onClick={() => updateStatus(order.id, "Out for Delivery")}
-                        style={{
-                          margin: "5px",
-                          padding: "5px 10px",
-                          background: "#2196f3",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "4px",
-                        }}
-                      >
-                        Out for Delivery
-                      </button>
-                    )}
-                    {order.status === "Out for Delivery" && (
-                      <button
-                        onClick={() => updateStatus(order.id, "Delivered")}
-                        style={{
-                          margin: "5px",
-                          padding: "5px 10px",
-                          background: "#4caf50",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "4px",
-                        }}
-                      >
-                        Mark Delivered
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
