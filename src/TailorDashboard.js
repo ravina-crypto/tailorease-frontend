@@ -6,7 +6,7 @@ function TailorDashboard() {
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState("");
 
-  // Real-time fetch orders
+  // Real-time listener for orders
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "orders"), (snapshot) => {
       const orderList = snapshot.docs.map((doc) => ({
@@ -16,10 +16,10 @@ function TailorDashboard() {
       setOrders(orderList);
     });
 
-    return () => unsubscribe(); // Cleanup listener
+    return () => unsubscribe();
   }, []);
 
-  // Update order status to Completed
+  // Update order status
   const updateStatus = async (orderId, newStatus) => {
     try {
       const orderRef = doc(db, "orders", orderId);
@@ -27,13 +27,13 @@ function TailorDashboard() {
       setMessage(`✅ Order ${orderId} updated to "${newStatus}"`);
     } catch (error) {
       console.error(error);
-      setMessage(`❌ Error updating order: ${error.message}`);
+      setMessage("❌ Error updating order: " + error.message);
     }
   };
 
   return (
     <div style={{ textAlign: "center", marginTop: "40px" }}>
-      <h2>👔 Tailor Dashboard</h2>
+      <h2>🧵 Tailor Dashboard</h2>
       <p>Manage tailoring orders</p>
 
       {message && <p style={{ color: "green" }}>{message}</p>}
@@ -51,24 +51,12 @@ function TailorDashboard() {
         >
           <thead>
             <tr style={{ background: "#f0f0f0" }}>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Customer
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Service
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Amount
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Address
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Status
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Actions
-              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Customer</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Service</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Amount</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Address</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Status</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -87,33 +75,30 @@ function TailorDashboard() {
                   {order.address}
                 </td>
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  {order.status === "Pending" && (
-                    <span>⏳ Pending</span>
-                  )}
-                  {order.status === "Completed" && (
-                    <span>✅ Completed</span>
-                  )}
-                  {order.status === "Delivered" && (
-                    <span>📦 Delivered</span>
-                  )}
+                  {order.status === "Pending" && <span>⏳ Pending</span>}
+                  {order.status === "InProgress" && <span>✂️ In Progress</span>}
+                  {order.status === "Completed" && <span>✅ Completed (Ready for Pickup)</span>}
+                  {order.status === "PickedUp" && <span>📦 Picked Up by Delivery</span>}
+                  {order.status === "OutForDelivery" && <span>🚚 Out for Delivery</span>}
+                  {order.status === "Delivered" && <span>✔️ Delivered</span>}
                 </td>
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   {order.status === "Pending" && (
                     <button
+                      onClick={() => updateStatus(order.id, "InProgress")}
+                      style={{ marginRight: "5px" }}
+                    >
+                      Mark as In Progress
+                    </button>
+                  )}
+                  {order.status === "InProgress" && (
+                    <button
                       onClick={() => updateStatus(order.id, "Completed")}
-                      style={{
-                        padding: "5px 10px",
-                        background: "#4caf50",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                      }}
+                      style={{ marginRight: "5px" }}
                     >
                       Mark as Completed
                     </button>
                   )}
-                  {order.status !== "Pending" && <span>✔ No action</span>}
                 </td>
               </tr>
             ))}
