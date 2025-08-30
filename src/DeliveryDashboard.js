@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-// 🌍 Backend URL
+// ✅ Backend URL
 const API_URL = "https://multiservice-backend.onrender.com";
 
 function DeliveryDashboard() {
@@ -19,12 +19,21 @@ function DeliveryDashboard() {
     }
   };
 
-  // ✅ Update order status
-  const updateStatus = async (orderId, newStatus) => {
+  // ✅ Update order status + send push notification
+  const updateStatus = async (orderId, customerId, newStatus) => {
     try {
+      // 1. Update status in backend
       await axios.put(`${API_URL}/orders/${orderId}`, { status: newStatus });
+
+      // 2. Notify customer via backend FCM
+      await axios.post(`${API_URL}/notify`, {
+        userId: customerId,
+        title: "📦 Order Update",
+        body: `Your order is now ${newStatus}`,
+      });
+
       setMessage(`✅ Order ${orderId} updated to "${newStatus}"`);
-      fetchOrders(); // Refresh orders
+      fetchOrders(); // Refresh
     } catch (error) {
       console.error(error);
       setMessage("❌ Error updating order");
@@ -43,7 +52,7 @@ function DeliveryDashboard() {
       {message && <p style={{ color: "green" }}>{message}</p>}
 
       {orders.length === 0 ? (
-        <p>No orders available</p>
+        <p>📭 No orders available</p>
       ) : (
         <table
           style={{
@@ -74,35 +83,61 @@ function DeliveryDashboard() {
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   {order.address}
                 </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px", fontWeight: "bold" }}>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   {order.status}
                 </td>
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   {order.status === "Completed" && (
                     <button
-                      onClick={() => updateStatus(order.id, "PickedUp")}
-                      style={{ marginRight: "5px", background: "#007bff", color: "white", padding: "5px 10px", border: "none", borderRadius: "5px" }}
+                      onClick={() =>
+                        updateStatus(order.id, order.customerId, "PickedUp")
+                      }
+                      style={{
+                        marginRight: "5px",
+                        background: "#007bff",
+                        color: "white",
+                        padding: "5px 10px",
+                        border: "none",
+                        borderRadius: "5px",
+                      }}
                     >
                       Mark Picked Up
                     </button>
                   )}
                   {order.status === "PickedUp" && (
                     <button
-                      onClick={() => updateStatus(order.id, "OutForDelivery")}
-                      style={{ marginRight: "5px", background: "#ffc107", color: "black", padding: "5px 10px", border: "none", borderRadius: "5px" }}
+                      onClick={() =>
+                        updateStatus(order.id, order.customerId, "OutForDelivery")
+                      }
+                      style={{
+                        marginRight: "5px",
+                        background: "#ffc107",
+                        color: "black",
+                        padding: "5px 10px",
+                        border: "none",
+                        borderRadius: "5px",
+                      }}
                     >
                       Out for Delivery
                     </button>
                   )}
                   {order.status === "OutForDelivery" && (
                     <button
-                      onClick={() => updateStatus(order.id, "Delivered")}
-                      style={{ background: "#28a745", color: "white", padding: "5px 10px", border: "none", borderRadius: "5px" }}
+                      onClick={() =>
+                        updateStatus(order.id, order.customerId, "Delivered")
+                      }
+                      style={{
+                        background: "#28a745",
+                        color: "white",
+                        padding: "5px 10px",
+                        border: "none",
+                        borderRadius: "5px",
+                      }}
                     >
                       Mark Delivered
                     </button>
                   )}
-                  {order.status === "Delivered" && <span>✔️ Delivered</span>}
+                  {order.status === "Delivered" && <span>✅ Delivered</span>}
                 </td>
               </tr>
             ))}
