@@ -6,17 +6,17 @@ function DeliveryDashboard() {
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState("");
 
-  // Real-time listener for orders
+  // Real-time listener for all orders
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "orders"), (snapshot) => {
-      const ordersList = snapshot.docs.map((doc) => ({
+      const orderList = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-      setOrders(ordersList);
+      setOrders(orderList);
     });
 
-    return () => unsubscribe(); // cleanup
+    return () => unsubscribe();
   }, []);
 
   // Update order status
@@ -45,29 +45,76 @@ function DeliveryDashboard() {
           style={{
             margin: "auto",
             borderCollapse: "collapse",
-            width: "800px",
+            width: "90%",
+            maxWidth: "900px",
           }}
         >
           <thead>
             <tr style={{ background: "#f0f0f0" }}>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Customer</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Service</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Amount</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Address</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Status</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Actions</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Customer
+              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Service
+              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Amount
+              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Address
+              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Status
+              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
             {orders.map((order) => (
               <tr key={order.id}>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.customerId}</td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.service}</td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.amount}</td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.address}</td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.status}</td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  {order.customerId}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  {order.service}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  ₹{order.amount}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  {order.address}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  {order.status === "Pending" && <span>⏳ Pending</span>}
+                  {order.status === "Completed" && (
+                    <span>🧵 Ready for Pickup</span>
+                  )}
+                  {order.status === "PickedUp" && <span>📦 Picked Up</span>}
+                  {order.status === "OutForDelivery" && (
+                    <span>🚚 Out for Delivery</span>
+                  )}
+                  {order.status === "Delivered" && <span>✅ Delivered</span>}
+                </td>
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   {order.status === "Completed" && (
+                    <button
+                      onClick={() => updateStatus(order.id, "PickedUp")}
+                      style={{ marginRight: "5px" }}
+                    >
+                      Mark as Picked Up
+                    </button>
+                  )}
+                  {order.status === "PickedUp" && (
+                    <button
+                      onClick={() => updateStatus(order.id, "OutForDelivery")}
+                      style={{ marginRight: "5px" }}
+                    >
+                      Mark as Out for Delivery
+                    </button>
+                  )}
+                  {order.status === "OutForDelivery" && (
                     <button
                       onClick={() => updateStatus(order.id, "Delivered")}
                       style={{ marginRight: "5px" }}
@@ -75,8 +122,6 @@ function DeliveryDashboard() {
                       Mark as Delivered
                     </button>
                   )}
-                  {order.status === "Pending" && <span>⏳ Waiting for tailor</span>}
-                  {order.status === "Delivered" && <span>✅ Delivered</span>}
                 </td>
               </tr>
             ))}
