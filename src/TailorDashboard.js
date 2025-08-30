@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { message as antdMessage } from "antd"; // Toast notifications
 
-// 🌍 Backend URL
+// Backend URL
 const API_URL = "https://multiservice-backend.onrender.com";
 
 function TailorDashboard() {
@@ -19,31 +20,45 @@ function TailorDashboard() {
     }
   };
 
-  // ✅ Update order status
-  const updateStatus = async (orderId, newStatus) => {
+  // ✅ Update status and notify customer
+  const updateStatus = async (orderId, customerId, newStatus) => {
     try {
+      // 1. Update backend
       await axios.put(`${API_URL}/orders/${orderId}`, { status: newStatus });
+
+      // 2. Send push notification to customer
+      await axios.post(`${API_URL}/notify`, {
+        userId: customerId,
+        title: "👔 Tailoring Update",
+        body: `Your order is now ${newStatus}`,
+      });
+
       setMessage(`✅ Order ${orderId} updated to "${newStatus}"`);
-      fetchOrders(); // Refresh list
+      antdMessage.success(`Order ${orderId} is now ${newStatus}`);
+
+      // Refresh orders
+      fetchOrders();
     } catch (error) {
       console.error(error);
       setMessage("❌ Error updating order");
+      antdMessage.error("Failed to update order");
     }
   };
 
+  // ✅ Load orders on page load
   useEffect(() => {
     fetchOrders();
   }, []);
 
   return (
     <div style={{ textAlign: "center", marginTop: "40px" }}>
-      <h2>🧵 Tailor Dashboard</h2>
-      <p>Manage tailoring orders</p>
+      <h2>👔 Tailor Dashboard</h2>
+      <p>Manage tailoring orders & update progress</p>
 
       {message && <p style={{ color: "green" }}>{message}</p>}
 
       {orders.length === 0 ? (
-        <p>No orders yet</p>
+        <p>No tailoring orders yet</p>
       ) : (
         <table
           style={{
@@ -55,7 +70,7 @@ function TailorDashboard() {
         >
           <thead>
             <tr style={{ background: "#f0f0f0" }}>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Customer ID</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Customer</th>
               <th style={{ border: "1px solid #ccc", padding: "8px" }}>Service</th>
               <th style={{ border: "1px solid #ccc", padding: "8px" }}>Amount</th>
               <th style={{ border: "1px solid #ccc", padding: "8px" }}>Address</th>
@@ -66,49 +81,58 @@ function TailorDashboard() {
           <tbody>
             {orders.map((order) => (
               <tr key={order.id}>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.customerId}</td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.service}</td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.amount}</td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{order.address}</td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  {order.customerId}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  {order.service}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  ₹{order.amount}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  {order.address}
+                </td>
                 <td style={{ border: "1px solid #ccc", padding: "8px", fontWeight: "bold" }}>
                   {order.status}
                 </td>
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   {order.status === "Pending" && (
                     <button
-                      onClick={() => updateStatus(order.id, "InProgress")}
+                      onClick={() =>
+                        updateStatus(order.id, order.customerId, "InProgress")
+                      }
                       style={{
                         marginRight: "5px",
-                        padding: "5px 10px",
-                        background: "#6c63ff",
+                        background: "#ff9800",
                         color: "white",
+                        padding: "5px 10px",
                         border: "none",
                         borderRadius: "5px",
-                        cursor: "pointer",
                       }}
                     >
                       Start Work
                     </button>
                   )}
+
                   {order.status === "InProgress" && (
                     <button
-                      onClick={() => updateStatus(order.id, "Completed")}
+                      onClick={() =>
+                        updateStatus(order.id, order.customerId, "Completed")
+                      }
                       style={{
-                        marginRight: "5px",
-                        padding: "5px 10px",
                         background: "#28a745",
                         color: "white",
+                        padding: "5px 10px",
                         border: "none",
                         borderRadius: "5px",
-                        cursor: "pointer",
                       }}
                     >
                       Mark Completed
                     </button>
                   )}
-                  {order.status === "Completed" && (
-                    <span>✅ Ready for Pickup</span>
-                  )}
+
+                  {order.status === "Completed" && <span>✅ Completed</span>}
                 </td>
               </tr>
             ))}
