@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { auth, db } from "./firebase";
+import { auth, db, saveFcmToken } from "./firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
@@ -11,27 +11,32 @@ function Login() {
 
   const handleLogin = async () => {
     try {
-      // Login with Firebase Auth
+      // 🔹 Login with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Get user role from Firestore
+      // 🔹 Save FCM token for this user
+      await saveFcmToken(user);
+
+      // 🔹 Get user role from Firestore
       const userDoc = await getDoc(doc(db, "users", user.uid));
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
         const role = userData.role;
 
-        // Redirect based on role
-        if (role === "Customer") {
+        // 🔹 Redirect based on role
+        if (role === "customer") {
           navigate("/customer");
-        } else if (role === "Tailor") {
+        } else if (role === "tailor") {
           navigate("/tailor");
-        } else if (role === "Delivery Partner") {
+        } else if (role === "delivery") {
           navigate("/delivery");
+        } else {
+          alert("⚠️ User role not found!");
         }
       } else {
-        alert("User data not found!");
+        alert("⚠️ User data not found!");
       }
     } catch (error) {
       alert("❌ Login Error: " + error.message);
