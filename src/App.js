@@ -1,14 +1,17 @@
-import React from "react";
+import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import Signup from "./Signup";
-import Login from "./Login";
-
-// This is your Payment page code (kept inside App.js for now)
 import axios from "axios";
 
+import Signup from "./Signup";
+import Login from "./Login";
+import CustomerDashboard from "./CustomerDashboard";
+import TailorDashboard from "./TailorDashboard";
+import DeliveryDashboard from "./DeliveryDashboard";
+
+// ------------------ Payment Component ------------------
 function Payment() {
-  const [service, setService] = React.useState("");
-  const [amount, setAmount] = React.useState("");
+  const [service, setService] = useState("");
+  const [amount, setAmount] = useState("");
 
   const handlePayment = async () => {
     try {
@@ -18,7 +21,7 @@ function Payment() {
       });
 
       const options = {
-        key: "rzp_test_RBUM85t6T0YOJ3", // Replace with your Razorpay Key_ID
+        key: "rzp_test_RBUMBs6tY0YOJ3", // Replace with your Razorpay Key_ID
         amount: data.amount,
         currency: "INR",
         name: "TailorEase",
@@ -27,9 +30,7 @@ function Payment() {
         handler: function (response) {
           alert(`✅ Payment successful for ${service}! Payment ID: ${response.razorpay_payment_id}`);
         },
-        theme: {
-          color: "#6c63ff",
-        },
+        theme: { color: "#6c63ff" },
       };
 
       const rzp = new window.Razorpay(options);
@@ -42,7 +43,7 @@ function Payment() {
 
   return (
     <div style={{ textAlign: "center", marginTop: "50px", fontFamily: "Arial" }}>
-      <h1>💙 TailorEase</h1>
+      <h1>🧵 TailorEase</h1>
       <p>Book tailoring services & pay online</p>
 
       <input
@@ -53,7 +54,6 @@ function Payment() {
         style={{ padding: "10px", margin: "10px", width: "250px" }}
       />
       <br />
-
       <input
         type="number"
         placeholder="Enter amount"
@@ -62,7 +62,6 @@ function Payment() {
         style={{ padding: "10px", margin: "10px", width: "250px" }}
       />
       <br />
-
       <button
         onClick={handlePayment}
         style={{
@@ -80,7 +79,7 @@ function Payment() {
   );
 }
 
-// Main App with Routes
+// ------------------ Main App with Routes ------------------
 function App() {
   return (
     <Router>
@@ -91,9 +90,17 @@ function App() {
       </nav>
 
       <Routes>
+        {/* Auth */}
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
+
+        {/* Payment */}
         <Route path="/payment" element={<Payment />} />
+
+        {/* Dashboards */}
+        <Route path="/customer" element={<CustomerDashboard />} />
+        <Route path="/tailor" element={<TailorDashboard />} />
+        <Route path="/delivery" element={<DeliveryDashboard />} />
       </Routes>
     </Router>
   );
