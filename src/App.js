@@ -13,7 +13,7 @@ function App() {
       });
 
       const options = {
-        key: "rzp_test_xxxxxxxx", // 🔑 Replace with your Razorpay Key_ID
+        key: "rzp_test_RBUW8S6t70YO3J", // 🔑 Replace with your Razorpay Key_ID
         amount: data.amount,
         currency: data.currency,
         name: "TailorEase",
