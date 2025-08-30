@@ -16,7 +16,7 @@ function CustomerDashboard() {
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState("");
 
-  // Place new order
+  // Place a new order
   const handlePlaceOrder = async () => {
     try {
       const user = auth.currentUser;
@@ -44,7 +44,7 @@ function CustomerDashboard() {
     }
   };
 
-  // Real-time fetch customer's orders
+  // Real-time fetch only this customer's orders
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -62,14 +62,34 @@ function CustomerDashboard() {
     return () => unsubscribe();
   }, []);
 
+  // Get readable status with emojis
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case "Pending":
+        return "⏳ Pending (Waiting for tailor)";
+      case "InProgress":
+        return "✂️ In Progress (Tailor working)";
+      case "Completed":
+        return "✅ Completed (Ready for pickup)";
+      case "PickedUp":
+        return "📦 Picked Up by Delivery";
+      case "OutForDelivery":
+        return "🚚 Out for Delivery";
+      case "Delivered":
+        return "✔️ Delivered";
+      default:
+        return status;
+    }
+  };
+
   return (
     <div style={{ textAlign: "center", marginTop: "40px" }}>
       <h2>🧵 Customer Dashboard</h2>
-      <p>Book tailoring services with pickup & delivery</p>
+      <p>Book tailoring services and track your orders live</p>
 
       {message && <p style={{ color: "green" }}>{message}</p>}
 
-      {/* Place new order */}
+      {/* New Order Form */}
       <div style={{ marginBottom: "30px" }}>
         <input
           type="text"
@@ -111,10 +131,10 @@ function CustomerDashboard() {
         </button>
       </div>
 
-      {/* Order status tracking */}
+      {/* Orders List */}
       <h3>📋 Your Orders</h3>
       {orders.length === 0 ? (
-        <p>No orders placed yet</p>
+        <p>No orders yet</p>
       ) : (
         <table
           style={{
@@ -126,18 +146,10 @@ function CustomerDashboard() {
         >
           <thead>
             <tr style={{ background: "#f0f0f0" }}>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Service
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Amount
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Address
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                Status
-              </th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Service</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Amount</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Address</th>
+              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -152,10 +164,8 @@ function CustomerDashboard() {
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   {order.address}
                 </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  {order.status === "Pending" && <span>⏳ Pending</span>}
-                  {order.status === "Completed" && <span>✅ Completed</span>}
-                  {order.status === "Delivered" && <span>📦 Delivered</span>}
+                <td style={{ border: "1px solid #ccc", padding: "8px", fontWeight: "bold" }}>
+                  {getStatusLabel(order.status)}
                 </td>
               </tr>
             ))}
