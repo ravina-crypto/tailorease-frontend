@@ -12,10 +12,14 @@ function Login() {
   const handleLogin = async () => {
     try {
       // 🔹 Login with Firebase Auth
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
-      // 🔹 Save FCM token for this user
+      // 🔹 Save FCM token (for notifications)
       await saveFcmToken(user);
 
       // 🔹 Get user role from Firestore
@@ -32,6 +36,8 @@ function Login() {
           navigate("/tailor");
         } else if (role === "delivery") {
           navigate("/delivery");
+        } else if (role === "admin") {
+          navigate("/admin"); // ✅ New update for Admin Dashboard
         } else {
           alert("⚠️ User role not found!");
         }
@@ -45,22 +51,38 @@ function Login() {
 
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h2>Login</h2>
+      <h2>🔑 Login</h2>
+
       <input
         type="email"
         placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        style={{ margin: "10px", padding: "10px", width: "250px" }}
       />
-      <br /><br />
+      <br />
       <input
         type="password"
         placeholder="Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
+        style={{ margin: "10px", padding: "10px", width: "250px" }}
       />
-      <br /><br />
-      <button onClick={handleLogin}>Login</button>
+      <br />
+      <button
+        onClick={handleLogin}
+        style={{
+          padding: "10px 20px",
+          background: "#6c63ff",
+          color: "white",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+          marginTop: "10px",
+        }}
+      >
+        Login
+      </button>
     </div>
   );
 }
