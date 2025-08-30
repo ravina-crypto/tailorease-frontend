@@ -24,6 +24,7 @@ function Signup() {
         name,
         email,
         role,
+        walletBalance: 0, // ✅ Add wallet balance for every user
         createdAt: new Date(),
       });
 
@@ -38,38 +39,60 @@ function Signup() {
 
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h2>Signup</h2>
+      <h2>📝 Signup</h2>
+
       <input
         type="text"
         placeholder="Full Name"
         value={name}
         onChange={(e) => setName(e.target.value)}
+        style={{ margin: "10px", padding: "10px", width: "250px" }}
       />
-      <br /><br />
+      <br />
       <input
         type="email"
         placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        style={{ margin: "10px", padding: "10px", width: "250px" }}
       />
-      <br /><br />
+      <br />
       <input
         type="password"
         placeholder="Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
+        style={{ margin: "10px", padding: "10px", width: "250px" }}
       />
-      <br /><br />
+      <br />
 
-      {/* Dropdown for Role */}
-      <select value={role} onChange={(e) => setRole(e.target.value)}>
+      {/* 🔹 Dropdown for Role */}
+      <select
+        value={role}
+        onChange={(e) => setRole(e.target.value)}
+        style={{ margin: "10px", padding: "10px", width: "250px" }}
+      >
         <option value="Customer">Customer</option>
         <option value="Tailor">Tailor</option>
         <option value="Delivery">Delivery Partner</option>
+        <option value="Admin">Admin</option> {/* ✅ Added Admin option */}
       </select>
-      <br /><br />
+      <br />
 
-      <button onClick={handleSignup}>Signup</button>
+      <button
+        onClick={handleSignup}
+        style={{
+          padding: "10px 20px",
+          background: "#6c63ff",
+          color: "white",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+          marginTop: "10px",
+        }}
+      >
+        Signup
+      </button>
     </div>
   );
 }
