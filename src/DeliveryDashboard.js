@@ -1,140 +1,118 @@
 import React, { useEffect, useState } from "react";
+import { db } from "./firebase";
+import {
+  collection,
+  doc,
+  updateDoc,
+  onSnapshot,
+} from "firebase/firestore";
 import axios from "axios";
+import { message as antMessage } from "antd";
 
-// Backend URL
 const API_URL = "https://multiservice-backend.onrender.com";
 
 function DeliveryDashboard() {
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState("");
 
-  // ✅ Fetch all orders
-  const fetchOrders = async () => {
-    try {
-      const { data } = await axios.get(`${API_URL}/orders`);
-      setOrders(data);
-    } catch (error) {
-      console.error(error);
-      setMessage("❌ Error fetching orders");
-    }
-  };
+  // 🔹 Real-time fetch orders
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "orders"), (snapshot) => {
+      const liveOrders = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setOrders(liveOrders);
+    });
+    return () => unsubscribe();
+  }, []);
 
-  // ✅ Update order status & notify customer
+  // 🔹 Update order status + notify customer
   const updateStatus = async (orderId, customerId, newStatus) => {
     try {
-      // 1️⃣ Update status in backend
-      await axios.put(`${API_URL}/orders/${orderId}`, { status: newStatus });
+      // Update Firestore order
+      await updateDoc(doc(db, "orders", orderId), { status: newStatus });
 
-      // 2️⃣ Send notification to customer
+      // Notify customer via backend
       await axios.post(`${API_URL}/notify`, {
         userId: customerId,
-        title: "📦 Order Update",
-        body: `Your order is now ${newStatus}`,
+        title: "Order Update",
+        body: `Your order is now "${newStatus}".`,
       });
 
-      setMessage(`✅ Order ${orderId} updated to "${newStatus}"`);
-      fetchOrders(); // Refresh orders
-    } catch (error) {
-      console.error(error);
-      setMessage("❌ Error updating order");
+      setMessage(`✅ Order updated to "${newStatus}"`);
+    } catch (err) {
+      console.error("Error updating status:", err);
+      antMessage.error("❌ Failed to update order");
     }
   };
-
-  useEffect(() => {
-    fetchOrders();
-  }, []);
 
   return (
     <div style={{ textAlign: "center", marginTop: "40px" }}>
       <h2>🚚 Delivery Partner Dashboard</h2>
-      <p>Manage pickups and deliveries</p>
+      <p>Manage pickups & deliveries in real-time</p>
 
       {message && <p style={{ color: "green" }}>{message}</p>}
 
       {orders.length === 0 ? (
-        <p>📭 No orders available</p>
+        <p>No orders available</p>
       ) : (
         <table
           style={{
             margin: "auto",
             borderCollapse: "collapse",
             width: "90%",
-            maxWidth: "900px",
+            maxWidth: "1000px",
           }}
         >
           <thead>
             <tr style={{ background: "#f0f0f0" }}>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Customer</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Service</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Address</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Status</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Actions</th>
+              <th style={thStyle}>Customer</th>
+              <th style={thStyle}>Service</th>
+              <th style={thStyle}>Address</th>
+              <th style={thStyle}>Status</th>
+              <th style={thStyle}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {orders.map((order) => (
               <tr key={order.id}>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  {order.customerId}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  {order.service}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  {order.address}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px", fontWeight: "bold" }}>
-                  {order.status}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                <td style={tdStyle}>{order.customerId}</td>
+                <td style={tdStyle}>{order.service}</td>
+                <td style={tdStyle}>{order.address}</td>
+                <td style={tdStyle}>{order.status}</td>
+                <td style={tdStyle}>
                   {order.status === "Completed" && (
                     <button
-                      onClick={() => updateStatus(order.id, order.customerId, "PickedUp")}
-                      style={{
-                        marginRight: "5px",
-                        background: "#007bff",
-                        color: "white",
-                        padding: "5px 10px",
-                        border: "none",
-                        borderRadius: "5px",
-                      }}
+                      style={btnStyle("#007bff")}
+                      onClick={() =>
+                        updateStatus(order.id, order.customerId, "PickedUp")
+                      }
                     >
-                      📦 Mark Picked Up
+                      Mark Picked Up
                     </button>
                   )}
-
                   {order.status === "PickedUp" && (
                     <button
-                      onClick={() => updateStatus(order.id, order.customerId, "OutForDelivery")}
-                      style={{
-                        marginRight: "5px",
-                        background: "#ffc107",
-                        color: "black",
-                        padding: "5px 10px",
-                        border: "none",
-                        borderRadius: "5px",
-                      }}
+                      style={btnStyle("#ff9800")}
+                      onClick={() =>
+                        updateStatus(order.id, order.customerId, "OutForDelivery")
+                      }
                     >
-                      🚚 Out for Delivery
+                      Out for Delivery
                     </button>
                   )}
-
                   {order.status === "OutForDelivery" && (
                     <button
-                      onClick={() => updateStatus(order.id, order.customerId, "Delivered")}
-                      style={{
-                        background: "#28a745",
-                        color: "white",
-                        padding: "5px 10px",
-                        border: "none",
-                        borderRadius: "5px",
-                      }}
+                      style={btnStyle("#28a745")}
+                      onClick={() =>
+                        updateStatus(order.id, order.customerId, "Delivered")
+                      }
                     >
-                      ✅ Mark Delivered
+                      Mark Delivered
                     </button>
                   )}
-
-                  {order.status === "Delivered" && <span>✔ Delivered</span>}
+                  {order.status === "Delivered" && <span>✅ Delivered</span>}
                 </td>
               </tr>
             ))}
@@ -144,5 +122,25 @@ function DeliveryDashboard() {
     </div>
   );
 }
+
+const thStyle = {
+  border: "1px solid #ccc",
+  padding: "8px",
+};
+
+const tdStyle = {
+  border: "1px solid #ccc",
+  padding: "8px",
+};
+
+const btnStyle = (bg) => ({
+  marginRight: "5px",
+  background: bg,
+  color: "white",
+  padding: "5px 10px",
+  border: "none",
+  borderRadius: "5px",
+  cursor: "pointer",
+});
 
 export default DeliveryDashboard;
