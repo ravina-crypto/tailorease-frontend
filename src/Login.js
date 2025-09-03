@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "./firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -8,36 +11,31 @@ function Login() {
 
   const handleLogin = async () => {
     try {
-      const res = await fetch("https://multiservice-backend.onrender.com/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      // 🔹 Login using Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-      const data = await res.json();
+      // 🔹 Fetch role from Firestore
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        const role = userDoc.data().role;
 
-      if (data.success) {
-        // Save token (optional)
-        localStorage.setItem("token", data.token);
-
-        // Redirect based on role
-        const role = data.role;
-        if (role === "customer") navigate("/customer");
-        else if (role === "tailor") navigate("/tailor");
-        else if (role === "delivery") navigate("/delivery");
-        else if (role === "admin") navigate("/admin");
-        else alert("⚠️ User role not found");
+        if (role === "Customer") navigate("/customer");
+        else if (role === "Tailor") navigate("/tailor");
+        else if (role === "Delivery") navigate("/delivery");
+        else if (role === "Admin") navigate("/admin");
+        else alert("⚠️ Unknown role");
       } else {
-        alert("❌ Login failed: " + data.error);
+        alert("⚠️ User data not found!");
       }
     } catch (error) {
-      alert("⚠️ Login Error: " + error.message);
+      alert("❌ Login error: " + error.message);
     }
   };
 
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h2>Login</h2>
+      <h2>🔑 Login</h2>
 
       <input
         type="email"
