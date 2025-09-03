@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { auth, db, saveFcmToken } from "./firebase";
+import { auth, db, saveFcmToken } from "./firebase"; // ✅ your firebase.js config
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 
@@ -12,23 +12,20 @@ function Signup() {
   const handleSignup = async () => {
     try {
       // 🔹 Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
       // 🔹 Save user data in Firestore
       await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
         name,
         email,
-        role,
-        walletBalance: 0, // ✅ Add wallet balance for every user
+        role,                // Customer / Tailor / Delivery / Admin
+        walletBalance: 0,    // Default wallet balance
         createdAt: new Date(),
       });
 
-      // 🔹 Save FCM token immediately after signup
+      // 🔹 Save FCM token for push notifications
       await saveFcmToken(user);
 
       alert("✅ Signup successful!");
@@ -49,6 +46,7 @@ function Signup() {
         style={{ margin: "10px", padding: "10px", width: "250px" }}
       />
       <br />
+
       <input
         type="email"
         placeholder="Email"
@@ -57,6 +55,7 @@ function Signup() {
         style={{ margin: "10px", padding: "10px", width: "250px" }}
       />
       <br />
+
       <input
         type="password"
         placeholder="Password"
@@ -75,7 +74,7 @@ function Signup() {
         <option value="Customer">Customer</option>
         <option value="Tailor">Tailor</option>
         <option value="Delivery">Delivery Partner</option>
-        <option value="Admin">Admin</option> {/* ✅ Added Admin option */}
+        <option value="Admin">Admin</option>
       </select>
       <br />
 
