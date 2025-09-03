@@ -1,7 +1,4 @@
 import React, { useState } from "react";
-import { auth, db, saveFcmToken } from "./firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
 function Login() {
@@ -11,47 +8,36 @@ function Login() {
 
   const handleLogin = async () => {
     try {
-      // 🔹 Login with Firebase Auth
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = userCredential.user;
+      const res = await fetch("https://multiservice-backend.onrender.com/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-      // 🔹 Save FCM token (for notifications)
-      await saveFcmToken(user);
+      const data = await res.json();
 
-      // 🔹 Get user role from Firestore
-      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (data.success) {
+        // Save token (optional)
+        localStorage.setItem("token", data.token);
 
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const role = userData.role;
-
-        // 🔹 Redirect based on role
-        if (role === "customer") {
-          navigate("/customer");
-        } else if (role === "tailor") {
-          navigate("/tailor");
-        } else if (role === "delivery") {
-          navigate("/delivery");
-        } else if (role === "admin") {
-          navigate("/admin"); // ✅ New update for Admin Dashboard
-        } else {
-          alert("⚠️ User role not found!");
-        }
+        // Redirect based on role
+        const role = data.role;
+        if (role === "customer") navigate("/customer");
+        else if (role === "tailor") navigate("/tailor");
+        else if (role === "delivery") navigate("/delivery");
+        else if (role === "admin") navigate("/admin");
+        else alert("⚠️ User role not found");
       } else {
-        alert("⚠️ User data not found!");
+        alert("❌ Login failed: " + data.error);
       }
     } catch (error) {
-      alert("❌ Login Error: " + error.message);
+      alert("⚠️ Login Error: " + error.message);
     }
   };
 
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h2>🔑 Login</h2>
+      <h2>Login</h2>
 
       <input
         type="email"
@@ -61,6 +47,7 @@ function Login() {
         style={{ margin: "10px", padding: "10px", width: "250px" }}
       />
       <br />
+
       <input
         type="password"
         placeholder="Password"
@@ -69,6 +56,7 @@ function Login() {
         style={{ margin: "10px", padding: "10px", width: "250px" }}
       />
       <br />
+
       <button
         onClick={handleLogin}
         style={{
