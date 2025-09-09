@@ -1,9 +1,9 @@
 // src/api.js
 
-// 🔹 Hardcoded backend URL (Render live backend)
-const API_URL = "https://multiservice-backend.onrender.com";
+// Hardcoded backend URL (Render live backend)
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-// ---------------- Helper functions ----------------
+// Helper: POST
 async function postJson(path, body) {
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",
@@ -13,12 +13,13 @@ async function postJson(path, body) {
   return res.json();
 }
 
+// Helper: GET
 async function getJson(path) {
   const res = await fetch(`${API_URL}${path}`);
   return res.json();
 }
 
-// ---------------- Wallet APIs ----------------
+// Wallet APIs
 export function addMoney(userId, amount) {
   return postJson("/wallet/add", { userId, amount });
 }
@@ -31,7 +32,7 @@ export function walletHistory(userId) {
   return getJson(`/wallet/${userId}`);
 }
 
-// ---------------- Order APIs ----------------
+// Orders APIs
 export function createOrder(customerId, service, amount, address) {
   return postJson("/orders", { customerId, service, amount, address });
 }
@@ -40,7 +41,7 @@ export function updateOrderStatus(orderId, status) {
   return postJson("/orders/update", { orderId, status });
 }
 
-// ---------------- Razorpay / Payment APIs ----------------
+// Payment APIs
 export function createRazorOrder(amount) {
   return postJson("/order", { amount });
 }
@@ -54,5 +55,5 @@ export function verifyPayment(orderId, paymentId, signature, customerId) {
   });
 }
 
-// 🔹 Export API URL too (in case you need it)
+// Export API_URL for debugging
 export default { API_URL };
