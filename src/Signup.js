@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { auth, db, saveFcmToken } from "./firebase"; 
+import { auth, db, saveFcmToken } from "./firebase"; // ✅ from firebase.js
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { addMoney } from "./api"; // ✅ Backend API
 
 function Signup() {
   const [email, setEmail] = useState("");
@@ -25,14 +24,12 @@ function Signup() {
         uid: user.uid,
         name,
         email,
-        role, // Customer / Tailor / Delivery / Admin
+        role, // Customer | Tailor | Delivery Partner | Admin
+        walletBalance: 0,
         createdAt: new Date(),
       });
 
-      // 🔹 Initialize wallet in backend (instead of Firestore directly)
-      await addMoney(user.uid, 0);
-
-      // 🔹 Save FCM token (for notifications)
+      // 🔹 Save FCM token
       await saveFcmToken(user);
 
       alert("✅ Signup successful!");
@@ -70,7 +67,7 @@ function Signup() {
       />
       <br />
 
-      {/* Dropdown for Role */}
+      {/* Role Dropdown */}
       <select
         value={role}
         onChange={(e) => setRole(e.target.value)}
