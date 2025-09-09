@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { auth, db, saveFcmToken } from "./firebase"; // ✅ your firebase.js config
+import { auth, db, saveFcmToken } from "./firebase"; 
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
+import { addMoney } from "./api"; // ✅ Backend API
 
 function Signup() {
   const [email, setEmail] = useState("");
@@ -12,7 +13,11 @@ function Signup() {
   const handleSignup = async () => {
     try {
       // 🔹 Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
       // 🔹 Save user data in Firestore
@@ -20,12 +25,14 @@ function Signup() {
         uid: user.uid,
         name,
         email,
-        role,                // Customer / Tailor / Delivery / Admin
-        walletBalance: 0,    // Default wallet balance
+        role, // Customer / Tailor / Delivery / Admin
         createdAt: new Date(),
       });
 
-      // 🔹 Save FCM token for push notifications
+      // 🔹 Initialize wallet in backend (instead of Firestore directly)
+      await addMoney(user.uid, 0);
+
+      // 🔹 Save FCM token (for notifications)
       await saveFcmToken(user);
 
       alert("✅ Signup successful!");
@@ -46,7 +53,6 @@ function Signup() {
         style={{ margin: "10px", padding: "10px", width: "250px" }}
       />
       <br />
-
       <input
         type="email"
         placeholder="Email"
@@ -55,7 +61,6 @@ function Signup() {
         style={{ margin: "10px", padding: "10px", width: "250px" }}
       />
       <br />
-
       <input
         type="password"
         placeholder="Password"
@@ -65,7 +70,7 @@ function Signup() {
       />
       <br />
 
-      {/* 🔹 Dropdown for Role */}
+      {/* Dropdown for Role */}
       <select
         value={role}
         onChange={(e) => setRole(e.target.value)}
